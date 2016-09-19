@@ -1,0 +1,19 @@
+{
+  "name": "monasync",
+  "version": "0.1.0",
+  "description": "Async/Sync Composition library for sync and async behaviors through an async monad to simplify program structure and comprehension",
+  "main": "monasync.js",
+  "scripts": {
+    "test": "node ./node_modules/mocha/bin/mocha ./tests/*.spec.js"
+  },
+  "author": "Chris Stead <cmstead@gmail.com> (http://www.chrisstead.com/)",
+  "license": "MPL",
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^3.0.2",
+    "sinon": "^1.17.5"
+  },
+  "dependencies": {
+    "signet": "^0.20.3"
+  }
+}
