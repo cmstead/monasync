@@ -3,6 +3,55 @@
 Async/Sync Composition library for sync and async behaviors through an async monad to simplify 
 program structure and comprehension.
 
+## Serial and parallel composition bindings
+
+### monasync.binding.serial
+
+Serial composition is done with monasync.binding.serial which has the signature, 
+`function+ => function, [function] => [*+] => undefined`. It's simple to compose functions together this way:
+
+~~~
+    var serialComposition = monasync.binding.serial(
+        asyncFn1,
+        asyncFn2,
+        asyncFn3
+    );
+
+    serialComposition(success, fail)(arg1, arg2, arg3);
+
+    // Composed functions are also composable:
+
+    var composedComposition = monasync.binding.serial(
+        serialComposition,
+        asyncFn4,
+        asyncFn5
+    );
+~~~
+
+### monasync.binding.parallel
+
+Parallel executing behaviors is done with monasync.binding.parallel which has the signature, 
+`function+ => function, [function] => [*+] => undefined`. It's simple to compose functions together this way:
+
+~~~
+    var parallelComposition = monasync.binding.parallel(
+        asyncTypedFn1,
+        asyncTypedFn2,
+        asyncTypedFn3
+    );
+
+    parallelComposition(success, fail)(arg1, arg2, arg3);
+
+    // Binding multiple parallel behaviors together is simple:
+
+    var composedComposition = monasync.binding.parallel(
+        serialComposition,
+        asyncTypedFn4,
+        asyncTypedFn5
+    );
+~~~
+
+
 ## Async typed function
 
 The async typed function is simply a function which has the following signature, 
@@ -68,4 +117,24 @@ is used as follows:
 
     var myAsyncFunction = monasync.sync.toAsync(myFunction);
     myAsyncFunction(arg1, arg2, callback);
+~~~
+
+## Putting it all together
+
+Here's an example of using multiple monasync functions together to create a complex composite behavior:
+
+~~~
+    var parallelComposition = monasync.binding.parallel(
+        asyncTypedFn,
+        monasync.async.wrap(asyncFn),
+    );
+
+    var serialComposition = monasync.binding.serial(
+        parallelComposition,
+        asyncTypedFn1,
+        monasync.sync.wrap(intermediateTransformation),
+        asyncTypedFn2
+    );
+
+    serialComposition(success, fail)(arg1, arg2);
 ~~~
