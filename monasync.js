@@ -37,17 +37,42 @@ var monasync = (function () {
         }
     }
 
-    function asyncWrap(asyncFn) {
-        return function (success, fail) {
-            fail = !isFunction(fail) ? noop : fail;
+    function attachImmutableProperty (obj, key, value){
+        Object.defineProperty(obj, key, {
+            value: value,
+            writeable: false
+        });
+    }
+
+    function buildAsyncPartial (original){
+        return function () {
+            var args = sliceArgs(arguments);
+
+            function enclosedOriginal () {
+                var callArgs = args.concat(sliceArgs(arguments));
+                original.apply(null, callArgs);
+            }
+
+            return asyncWrap(enclosedOriginal);
+        };
+    }
+
+    function asyncWrap(original) {
+        function Async(success, fail) {
+            var cleanFail = !isFunction(fail) ? noop : fail;
+            var callback = buildCallback(success, cleanFail);
 
             return function () {
-                var callback = buildCallback(success, fail);
                 var args = sliceArgs(arguments).concat([callback]);
 
-                asyncFn.apply(null, args);
+                Async.original.apply(null, args);
             }
         }
+
+        attachImmutableProperty(Async, 'original', original);
+        attachImmutableProperty(Async, 'partial', buildAsyncPartial(original));
+
+        return Async;
     }
 
     function noop() { }

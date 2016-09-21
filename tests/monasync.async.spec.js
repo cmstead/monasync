@@ -4,6 +4,10 @@ var assert = require('chai').assert;
 
 describe('async behaviors', function () {
 
+    function add (a, b){
+        return a + b;
+    }
+
     describe('wrap', function () {
 
         it('should call success function, and not fail function when underlying call succeeds', function () {
@@ -41,6 +45,24 @@ describe('async behaviors', function () {
 
             // If this throws an error, the test will fail
             monasync.async.wrap(behavior)(successCallback)();
+        });
+
+    });
+
+    describe('Async', function () {
+
+        var asyncAdd;
+
+        beforeEach(function () {
+            asyncAdd = monasync.sync.wrap(add);
+        });
+
+        it('should allow bound arguments', function () {
+            var asyncInc = asyncAdd.partial(1);
+
+            asyncInc(function (value) {
+                assert.equal(value, 6);
+            })(5);
         });
 
     });

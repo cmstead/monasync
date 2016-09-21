@@ -51,7 +51,6 @@ Parallel executing behaviors is done with monasync.binding.parallel which has th
     );
 ~~~
 
-
 ## Async typed function
 
 The async typed function is simply a function which has the following signature, 
@@ -84,6 +83,20 @@ An example is as follows:
 
     var myNewFn = monasync.async.wrap(myAsynchronousFn);
     myNewFn(success, failure)(arg1, arg2);
+~~~
+
+### Partial application on Async typed functions
+
+It's possible to partially apply arguments to async typed functions with the partial
+method. Partial will apply arguments and return a new async typed function.
+
+~~~
+    var asyncAdd = monasync.sync.wrap(function (a, b) { return a + b; });
+    var asyncAdd3 = asyncAdd.partial(3);
+
+    asyncAdd3(function (value){
+        console.log(value); // 11
+    })(8);
 ~~~
 
 ## Synchronous functions
