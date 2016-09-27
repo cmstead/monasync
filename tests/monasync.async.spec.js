@@ -36,7 +36,7 @@ describe('async behaviors', function () {
             monasync.async.wrap(behavior)(successCallback, failCallback)();
         });
 
-        it('should should not throw an error if failure function is omitted and behavior fails', function () {
+        it('should throw an error if failure function is omitted and behavior fails', function () {
             var successCallback = sinon.spy();
 
             function behavior(callback) {
@@ -44,7 +44,45 @@ describe('async behaviors', function () {
             }
 
             // If this throws an error, the test will fail
-            monasync.async.wrap(behavior)(successCallback)();
+            assert.throws(monasync.async.wrap(behavior)(successCallback));
+        });
+
+    });
+
+    describe('serialize', function () {
+        
+        it('should serialize async functions', function () {
+            var asyncIncrement = monasync.sync.toAsync(add.bind(null, 1));
+
+            var serialAdder = monasync.async.serialize(
+                asyncIncrement,
+                asyncIncrement,
+                asyncIncrement,
+                asyncIncrement
+            );
+
+            serialAdder(function(value) {
+                assert.equal(value, 5);
+            })(1);
+        });
+
+    });
+
+    describe('parallelize', function () {
+        
+        it('should parallelize async functions', function () {
+            var asyncIncrement = monasync.sync.toAsync(add.bind(null, 1, 1));
+
+            var parallelIncrementer = monasync.async.parallelize(
+                asyncIncrement,
+                asyncIncrement,
+                asyncIncrement,
+                asyncIncrement
+            );
+
+            parallelIncrementer(function(value) {
+                assert.equal(JSON.stringify(value), '[2,2,2,2]');
+            })();
         });
 
     });

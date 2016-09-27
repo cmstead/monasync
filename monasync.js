@@ -59,7 +59,7 @@ var monasync = (function () {
 
     function asyncWrap(original) {
         function Async(success, fail) {
-            var cleanFail = !isFunction(fail) ? noop : fail;
+            var cleanFail = !isFunction(fail) ? defaultFail : fail;
             var callback = buildCallback(success, cleanFail);
 
             return function () {
@@ -75,7 +75,9 @@ var monasync = (function () {
         return Async;
     }
 
-    function noop() { }
+    function defaultFail() {
+        throw new Error('Unhandled error condition occurred!' + JSON.stringify(sliceArgs(arguments), null, 4));
+    }
 
     function identity(success) {
         return function () {
@@ -150,9 +152,27 @@ var monasync = (function () {
         };
     }
 
+    function wrapAll (asyncFns){
+        return asyncFns.map(function (fn) {
+            return asyncWrap(fn);
+        });
+    }
+
+    function sliceAndWrapAll (args){
+        return wrapAll(sliceArgs(args));
+    }
+
+    function wrapAndBind (bindingFn){
+        return function () {
+            return bindingFn.apply(null, sliceAndWrapAll(arguments));
+        };
+    }
+
     return {
         async: {
-            wrap: asyncWrap
+            wrap: asyncWrap,
+            serialize: wrapAndBind(bindingSerial),
+            parallelize: wrapAndBind(bindingParallel)
         },
         sync: {
             toAsync: syncToAsync,
