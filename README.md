@@ -85,6 +85,44 @@ An example is as follows:
     myNewFn(success, failure)(arg1, arg2);
 ~~~
 
+### monasync.async.serialize
+
+Serialize returns an async-typed function which serializes a set of callback-accepting asynchronous 
+functions. The signature for serialize is `function+ => function, [function] => [*+] => undefined`. This is 
+the analog to binding.serial.
+
+~~~
+    function myAsyncFunction (callback) { /* does stuff and calls back */ };
+
+    var myNewFunction = monasync.async.serialize(
+        myAsyncFunction,
+        myAsyncFunction,
+        myAsyncFunction,
+        myAsyncFunction
+    );
+
+    myNewFunction(success, failure)(arg1, arg2);
+~~~
+
+### monasync.async.parallelize
+
+Serialize returns an async-typed function which parallelizes a set of callback-accepting asynchronous 
+functions. The signature for parallelize is `function+ => function, [function] => [*+] => undefined`. This is 
+the analog to binding.parallel.
+
+~~~
+    function myAsyncFunction (callback) { /* does stuff and calls back */ };
+
+    var myNewFunction = monasync.async.parallelize(
+        myAsyncFunction,
+        myAsyncFunction,
+        myAsyncFunction,
+        myAsyncFunction
+    );
+
+    myNewFunction(success, failure)(arg1, arg2);
+~~~
+
 ### Partial application on Async typed functions
 
 It's possible to partially apply arguments to async typed functions with the partial
