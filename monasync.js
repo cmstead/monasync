@@ -9,9 +9,16 @@ var monasync = (function () {
         return typeof value === 'function';
     }
 
+    function isErrorSet(value) {
+        return value.length > 0;
+    }
+
+    function either(isType, fallback, value) {
+        return isType(value) ? value : fallback;
+    }
+
     function sliceArgs(args, startIndex) {
-        startIndex = !isInt(startIndex) ? 0 : startIndex;
-        return Array.prototype.slice.call(args, startIndex);
+        return Array.prototype.slice.call(args, either(isInt, 0, startIndex));
     }
 
     function syncToAsync(sync) {
@@ -37,18 +44,18 @@ var monasync = (function () {
         }
     }
 
-    function attachImmutableProperty (obj, key, value){
+    function attachImmutableProperty(obj, key, value) {
         Object.defineProperty(obj, key, {
             value: value,
             writeable: false
         });
     }
 
-    function buildAsyncPartial (original){
+    function buildAsyncPartial(original) {
         return function () {
             var args = sliceArgs(arguments);
 
-            function enclosedOriginal () {
+            function enclosedOriginal() {
                 var callArgs = args.concat(sliceArgs(arguments));
                 original.apply(null, callArgs);
             }
@@ -59,8 +66,7 @@ var monasync = (function () {
 
     function asyncWrap(original) {
         function Async(success, fail) {
-            var cleanFail = !isFunction(fail) ? defaultFail : fail;
-            var callback = buildCallback(success, cleanFail);
+            var callback = buildCallback(success, either(isFunction, defaultFail, fail));
 
             return function () {
                 var args = sliceArgs(arguments).concat([callback]);
@@ -79,12 +85,6 @@ var monasync = (function () {
         throw new Error('Unhandled error condition occurred!' + JSON.stringify(sliceArgs(arguments), null, 4));
     }
 
-    function identity(success) {
-        return function () {
-            success.apply(null, sliceArgs(arguments));
-        }
-    }
-
     function bindActions(failure) {
         return function (success, action) {
             return action(success, failure);
@@ -97,7 +97,7 @@ var monasync = (function () {
         return function (success, failure) {
             return actions.reduce(
                 bindActions(failure),
-                identity(success, failure)
+                success
             );
         }
     }
@@ -109,24 +109,17 @@ var monasync = (function () {
         };
     }
 
-    function buildIsDone(results, errors, actions) {
-        return function () {
-            return results.length + errors.length === actions.length;
-        }
-    }
-
-    function getParallelError(errors) {
-        return errors.length > 0 ? errors : null;
+    function parallelIsDone(results, errors, actions) {
+        return results.length + errors.length === actions.length;
     }
 
     function buildParallelResolver(results, errors, actions) {
         return function (success, failure) {
-            var isDone = buildIsDone(results, errors, actions);
             var callback = buildCallback(success, failure);
 
             return function () {
-                if (isDone()) {
-                    callback(getParallelError(errors), results);
+                if (parallelIsDone(results, errors, actions)) {
+                    callback(either(isErrorSet, null, errors), results);
                 }
             };
         };
@@ -152,19 +145,10 @@ var monasync = (function () {
         };
     }
 
-    function wrapAll (asyncFns){
-        return asyncFns.map(function (fn) {
-            return asyncWrap(fn);
-        });
-    }
-
-    function sliceAndWrapAll (args){
-        return wrapAll(sliceArgs(args));
-    }
-
-    function wrapAndBind (bindingFn){
+    function wrapAndBind(bindingFn) {
         return function () {
-            return bindingFn.apply(null, sliceAndWrapAll(arguments));
+            var wrappedActions = sliceArgs(arguments).map(asyncWrap);
+            return bindingFn.apply(null, wrappedActions);
         };
     }
 
