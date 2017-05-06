@@ -1,12 +1,20 @@
 var monasync = (function () {
     'use strict';
 
-    function isInt(value) {
-        return typeof value === 'number' && value === Math.floor(value);
+    function noop() { }
+
+    function isTypeOf(typeStr) {
+        return function (value) {
+            return typeof value === typeStr;
+        };
     }
 
-    function isFunction(value) {
-        return typeof value === 'function';
+    var isFunction = isTypeOf('function');
+    var isNumber = isTypeOf('number');
+    var isObject = isTypeOf('object');
+
+    function isInt(value) {
+        return isNumber(value) && value === Math.floor(value);
     }
 
     function isErrorSet(value) {
@@ -49,36 +57,22 @@ var monasync = (function () {
             value: value,
             writeable: false
         });
-    }
 
-    function buildAsyncPartial(original) {
-        return function () {
-            var args = sliceArgs(arguments);
-
-            function enclosedOriginal() {
-                var callArgs = args.concat(sliceArgs(arguments));
-                original.apply(null, callArgs);
-            }
-
-            return asyncWrap(enclosedOriginal);
-        };
+        return obj;
     }
 
     function asyncWrap(original) {
         function Async(success, fail) {
-            var callback = buildCallback(success, either(isFunction, defaultFail, fail));
+            var cleanFail = either(isFunction, defaultFail, fail);
+            var callback = buildCallback(success, cleanFail);
 
             return function () {
                 var args = sliceArgs(arguments).concat([callback]);
-
-                Async.original.apply(null, args);
+                return original.apply(null, args);
             }
         }
 
-        attachImmutableProperty(Async, 'original', original);
-        attachImmutableProperty(Async, 'partial', buildAsyncPartial(original));
-
-        return Async;
+        return attachPartial(Async);
     }
 
     function defaultFail() {
@@ -91,15 +85,44 @@ var monasync = (function () {
         }
     }
 
+    function appliedPartial (action, args){
+        return function () {
+            var remainingArgs = sliceArgs(arguments);
+            return action.apply(null, args.concat(remainingArgs));
+        }
+    }
+
+    function attachPartial(binding) {
+
+        function bindPartial() {
+            var args = sliceArgs(arguments);
+
+            function newBinding (success, failure) {
+                var action = binding(success, failure);
+                return appliedPartial(action, args);
+            };
+
+            return attachPartial(newBinding);
+        }
+
+        return attachImmutableProperty(binding, 'partial', bindPartial);
+    }
+
     function bindingSerial() {
         var actions = sliceArgs(arguments).reverse();
 
-        return function (success, failure) {
-            return actions.reduce(
+        function bindResolutions(success, failure) {
+            var boundArgs = either(isObject, [], bindResolutions.args);
+
+            var action = actions.reduce(
                 bindActions(failure),
                 success
             );
+
+            return Function.prototype.bind.apply(action, boundArgs);
         }
+
+        return attachPartial(bindResolutions);
     }
 
     function buildParallelCallback(results, resolver) {
@@ -131,9 +154,9 @@ var monasync = (function () {
         var errors = [];
         var resolverFactory = buildParallelResolver(results, errors, actions);
 
-
-        return function (success, failure) {
+        return function bindResolutions(success, failure) {
             return function () {
+                var successCount = bindActions.successCount;
                 var resolver = resolverFactory(success, failure);
                 var successCallback = buildParallelCallback(results, resolver);
                 var failureCallback = buildParallelCallback(errors, resolver);
